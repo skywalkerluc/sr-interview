@@ -76,7 +76,7 @@ const sections = [
       { id: "rf4", text: "🚩 Não consegue estimar nada — evita números completamente", weight: "média" },
       { id: "rf5", text: "🚩 Solução é clone do sistema atual do emprego anterior", weight: "média" },
       { id: "rf6", text: "🚩 Cede imediatamente ao push-back sem argumentar", weight: "alta" },
-      { id: "rf7", text: "🚩 Não demonstra curiosidade pelo contexto da Caju", weight: "baixa" },
+      { id: "rf7", text: "🚩 Não demonstra curiosidade pelo contexto da empresa", weight: "baixa" },
     ],
   },
 ];
@@ -188,7 +188,7 @@ export default function InterviewChecklist() {
         {/* Header */}
         <div style={{ marginBottom: "2rem" }}>
           <div style={{ fontSize: 11, letterSpacing: "0.2em", color: "#3A3A4A", textTransform: "uppercase", marginBottom: "0.4rem" }}>
-            Caju · Entrevista Técnica · Etapa de Arquitetura · Senior
+            · Entrevista Técnica · Etapa de Arquitetura · Senior
           </div>
           <h1 style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: "clamp(1.5rem,4vw,2.1rem)", fontWeight: 700, color: "#F8FAFC", margin: 0, letterSpacing: "-0.02em" }}>
             Checklist de Avaliação
@@ -348,7 +348,7 @@ export default function InterviewChecklist() {
           ))}
         </div>
 
-        <div style={{ marginTop: "0.75rem", textAlign: "center", fontSize: 10, color: "#1E1E27" }}>caju · entrevista sênior · etapa de arquitetura</div>
+        <div style={{ marginTop: "0.75rem", textAlign: "center", fontSize: 10, color: "#1E1E27" }}>· entrevista sênior · etapa de arquitetura</div>
       </div>
     </div>
   );
