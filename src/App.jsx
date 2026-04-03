@@ -156,17 +156,96 @@ function computeScore(checked) {
   return { pct, rawScore, maxScore, adjustedScore, redFlagCount, redFlagPenaltyPts, criticalCoverage, criticalFail, level };
 }
 
+function getHiringRecommendation(score) {
+  if (score.level.id === "mid_plus") return "No hire";
+  if (score.level.id === "senior_potencial") return "Leaning no hire";
+  if (score.level.id === "senior_inicial") {
+    return score.redFlagCount > 0 || score.criticalFail.length > 0 ? "Leaning hire" : "Hire";
+  }
+  return score.redFlagCount > 0 ? "Hire" : "Strong hire";
+}
+
 export default function InterviewChecklist() {
   const [checked, setChecked] = useState({});
   const [notes, setNotes] = useState({});
   const [noteOpen, setNoteOpen] = useState({});
   const [candidate, setCandidate] = useState("");
   const [activeSection, setActiveSection] = useState(null);
+  const [copyStatus, setCopyStatus] = useState("idle");
 
   const toggle = (id) => setChecked((p) => ({ ...p, [id]: !p[id] }));
   const score = useMemo(() => computeScore(checked), [checked]);
+  const hiringRecommendation = useMemo(() => getHiringRecommendation(score), [score]);
   const checkedCount = Object.values(checked).filter(Boolean).length;
   const totalItems = sections.flatMap((s) => s.items).length;
+  const extractedSections = sections
+    .map((section) => ({
+      ...section,
+      items: section.items.filter((item) => checked[item.id]),
+    }))
+    .filter((section) => section.items.length > 0);
+
+  const extractContent = () => {
+    const redFlagSection = sections.find((section) => section.isRedFlags);
+    const selectedRedFlags = redFlagSection ? redFlagSection.items.filter((item) => checked[item.id]) : [];
+    const criticalCoverageLines = score.criticalCoverage.map((section) => {
+      const pct = Math.round(section.pct * 100);
+      return `- ${section.label}: ${pct}%`;
+    });
+    const sectionLines = extractedSections.flatMap((section) => [
+      `### ${section.label}`,
+      ...section.items.flatMap((item) => {
+        const note = notes[item.id]?.trim();
+        return note
+          ? [`- ${item.text}`, `  - Observacao: ${note}`]
+          : [`- ${item.text}`];
+      }),
+      "",
+    ]);
+    const redFlagLines = selectedRedFlags.length > 0
+      ? selectedRedFlags.flatMap((item) => {
+          const note = notes[item.id]?.trim();
+          return note
+            ? [`- ${item.text}`, `  - Observacao: ${note}`]
+            : [`- ${item.text}`];
+        })
+      : ["- Nenhuma red flag marcada"];
+
+    return [
+      "# Scorecard de Entrevista",
+      "",
+      "## Candidato",
+      `- Nome: ${candidate.trim() || "Nao informado"}`,
+      "",
+      "## Resultado Geral",
+      `- Score ajustado: ${score.pct}%`,
+      `- Nivel: ${score.level.label}`,
+      `- Itens avaliados: ${checkedCount}/${totalItems}`,
+      `- Penalidade por red flags: ${score.redFlagPenaltyPts > 0 ? `${score.redFlagPenaltyPts} pts` : "0 pts"}`,
+      "",
+      "## Cobertura Critica",
+      ...criticalCoverageLines,
+      "",
+      "## Pontos Levantados",
+      ...(sectionLines.length > 0 ? sectionLines : ["Nenhum item marcado.", ""]),
+      "## Red Flags",
+      ...redFlagLines,
+      "",
+      "## Recomendacao Final",
+      `- ${hiringRecommendation}`,
+    ].join("\n").trim();
+  };
+
+  const handleExtract = async () => {
+    try {
+      await navigator.clipboard.writeText(extractContent());
+      setCopyStatus("success");
+    } catch {
+      setCopyStatus("error");
+    }
+
+    window.setTimeout(() => setCopyStatus("idle"), 2000);
+  };
 
   return (
     <div style={{ minHeight: "100vh", background: "#0C0C0F", fontFamily: "'IBM Plex Mono','Courier New',monospace", color: "#E2E8F0", padding: "2rem" }}>
@@ -186,13 +265,37 @@ export default function InterviewChecklist() {
 
       <div style={{ maxWidth: 900, margin: "0 auto" }}>
         {/* Header */}
-        <div style={{ marginBottom: "2rem" }}>
-          <div style={{ fontSize: 11, letterSpacing: "0.2em", color: "#3A3A4A", textTransform: "uppercase", marginBottom: "0.4rem" }}>
-            · Entrevista Técnica · Etapa de Arquitetura · Senior
+        <div style={{ marginBottom: "2rem", display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "1rem", flexWrap: "wrap" }}>
+          <div>
+            <div style={{ fontSize: 11, letterSpacing: "0.2em", color: "#3A3A4A", textTransform: "uppercase", marginBottom: "0.4rem" }}>
+              · Entrevista Técnica · Etapa de Arquitetura · Senior
+            </div>
+            <h1 style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: "clamp(1.5rem,4vw,2.1rem)", fontWeight: 700, color: "#F8FAFC", margin: 0, letterSpacing: "-0.02em" }}>
+              Checklist de Avaliação
+            </h1>
           </div>
-          <h1 style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: "clamp(1.5rem,4vw,2.1rem)", fontWeight: 700, color: "#F8FAFC", margin: 0, letterSpacing: "-0.02em" }}>
-            Checklist de Avaliação
-          </h1>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "0.45rem", marginLeft: "auto" }}>
+            <button
+              type="button"
+              onClick={handleExtract}
+              style={{
+                background: checkedCount > 0 ? "#F8FAFC" : "#151821",
+                color: checkedCount > 0 ? "#0C0C0F" : "#667085",
+                border: "1px solid #2A2A38",
+                borderRadius: 8,
+                padding: "0.65rem 0.9rem",
+                fontSize: 12,
+                fontFamily: "inherit",
+                cursor: "pointer",
+                minWidth: 120,
+              }}
+            >
+              Extrair
+            </button>
+            <span style={{ fontSize: 11, color: copyStatus === "error" ? "#F87171" : "#667085", minHeight: 16 }}>
+              {copyStatus === "success" ? "Conteudo copiado para o clipboard." : copyStatus === "error" ? "Nao foi possivel copiar." : "Copia os itens marcados e suas anotacoes."}
+            </span>
+          </div>
         </div>
 
         <input
