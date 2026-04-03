@@ -157,12 +157,15 @@ function computeScore(checked) {
 }
 
 function getHiringRecommendation(score) {
-  if (score.level.id === "mid_plus") return "No hire";
-  if (score.level.id === "senior_potencial") return "Leaning no hire";
+  if (score.level.id === "nao_rec") return "No hire";
+  if (score.level.id === "pleno") return "Leaning no hire";
   if (score.level.id === "senior_inicial") {
     return score.redFlagCount > 0 || score.criticalFail.length > 0 ? "Leaning hire" : "Hire";
   }
-  return score.redFlagCount > 0 ? "Hire" : "Strong hire";
+  if (score.level.id === "senior_consolidado") {
+    return score.redFlagCount > 0 || score.criticalFail.length > 0 ? "Hire" : "Strong hire";
+  }
+  return "No hire";
 }
 
 export default function InterviewChecklist() {
@@ -172,6 +175,7 @@ export default function InterviewChecklist() {
   const [candidate, setCandidate] = useState("");
   const [activeSection, setActiveSection] = useState(null);
   const [copyStatus, setCopyStatus] = useState("idle");
+  const [copyResetTimeoutId, setCopyResetTimeoutId] = useState(null);
 
   const toggle = (id) => setChecked((p) => ({ ...p, [id]: !p[id] }));
   const score = useMemo(() => computeScore(checked), [checked]);
@@ -179,6 +183,7 @@ export default function InterviewChecklist() {
   const checkedCount = Object.values(checked).filter(Boolean).length;
   const totalItems = sections.flatMap((s) => s.items).length;
   const extractedSections = sections
+    .filter((section) => !section.isRedFlags)
     .map((section) => ({
       ...section,
       items: section.items.filter((item) => checked[item.id]),
@@ -244,7 +249,16 @@ export default function InterviewChecklist() {
       setCopyStatus("error");
     }
 
-    window.setTimeout(() => setCopyStatus("idle"), 2000);
+    if (copyResetTimeoutId) {
+      window.clearTimeout(copyResetTimeoutId);
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setCopyStatus("idle");
+      setCopyResetTimeoutId(null);
+    }, 2000);
+
+    setCopyResetTimeoutId(timeoutId);
   };
 
   return (
